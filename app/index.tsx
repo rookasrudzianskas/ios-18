@@ -1,4 +1,3 @@
-import React, {useState} from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
   StyleSheet,
@@ -7,14 +6,35 @@ import {
   Image,
   FlatList,
   ScrollView,
-  useWindowDimensions, NativeSyntheticEvent, NativeScrollEvent,
+  useWindowDimensions,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  Pressable,
 } from 'react-native';
-import { photos } from './data';
-import Carousel from './Carousel';
+import { photos } from '../data';
+import Carousel from '../Carousel';
+import {useEffect, useState} from 'react';
+import { Link } from 'expo-router';
+import Animated, {useAnimatedStyle, useSharedValue, withTiming} from "react-native-reanimated";
 
 export default function App() {
   const { height, width } = useWindowDimensions();
   const [headerCarouselPage, setHeaderCarouselPage] = useState(0);
+  const scale = useSharedValue(1.2);
+  const pageScrollViewPosition = useSharedValue(0);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  useEffect(() => {
+    scale.value = 1.2;
+    scale.value = withTiming(1, { duration: 6000 });
+  }, [headerCarouselPage]);
+
+  const onPageScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    pageScrollViewPosition.value = e.nativeEvent.contentOffset.y;
+  };
 
   const onHeaderCarouselScroll = (
     e: NativeSyntheticEvent<NativeScrollEvent>
@@ -29,7 +49,7 @@ export default function App() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container]} onScroll={onPageScroll}>
       {/* Header */}
       <ScrollView
         horizontal
@@ -49,22 +69,49 @@ export default function App() {
           scrollEnabled={false}
           inverted
           renderItem={({ item }) => (
-            <Image
-              source={item.image}
-              style={{ width: `${100 / 4}%`, aspectRatio: 1 }}
-            />
+            <Link href={`/photo/${item.id}`} asChild>
+              <Pressable style={{ width: `${100 / 4}%`, aspectRatio: 1 }}>
+                <Image
+                  source={item.image}
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </Pressable>
+            </Link>
           )}
         />
-        <Image
-          source={photos[0].image}
-          style={{ width, height: '100%' }}
-          resizeMode="cover"
-        />
-        <Image
-          source={photos[10].image}
-          style={{ width, height: '100%' }}
-          resizeMode="cover"
-        />
+        <View
+          style={{
+            width,
+            height: '100%',
+            overflow: 'hidden',
+          }}
+        >
+          <Animated.Image
+            source={photos[0].image}
+            style={[
+              {
+                width: width,
+                height: '100%',
+              },
+              animatedStyle,
+            ]}
+            resizeMode="cover"
+          />
+        </View>
+
+        <View style={{ width, height: '100%', overflow: 'hidden' }}>
+          <Animated.Image
+            source={photos[1].image}
+            style={[
+              {
+                width: width,
+                height: '100%',
+              },
+              animatedStyle,
+            ]}
+            resizeMode="cover"
+          />
+        </View>
       </ScrollView>
 
       <View
