@@ -37,8 +37,12 @@ export default function App() {
   const pageScrollViewRef = useAnimatedRef<Animated.ScrollView>();
 
   const scrollMode = useSharedValue<'PAGE' | 'GESTURE' | 'FLAT_LIST'>('PAGE');
-  const pageScrollEnabled = useDerivedValue(() => scrollMode.value === 'PAGE');
-  const flatListScrollEnabled = useDerivedValue(
+  const pageScrollEnabled = useDerivedValue(
+    () =>
+      scrollMode.value === 'PAGE' ||
+      (scrollMode.value === 'GESTURE' &&
+        gestureScrollPosition.value <= height / 2)
+  );  const flatListScrollEnabled = useDerivedValue(
     () => scrollMode.value === 'FLAT_LIST'
   );
 
@@ -67,11 +71,11 @@ export default function App() {
         return;
       }
 
-      if (current < height / 2 && scrollMode.value !== 'PAGE') {
+      if (current < height / 2 && scrollMode.value === 'GESTURE') {
         scrollMode.value = 'PAGE';
       }
 
-      if (current === height && scrollMode.value !== 'FLAT_LIST') {
+      if (current === height && scrollMode.value === 'GESTURE') {
         scrollMode.value = 'FLAT_LIST';
       }
     }
@@ -83,6 +87,9 @@ export default function App() {
       scrollMode.value = 'GESTURE';
       scrollTo(pageScrollViewRef, 0, 0, true);
     }
+    // if (e.contentOffset.y > 0 && scrollMode.value !== 'PAGE') {
+    //   scrollMode.value = 'PAGE';
+    // }
   });
 
   const onFlatListScroll = useAnimatedScrollHandler((e) => {
@@ -106,24 +113,27 @@ export default function App() {
 
   const gesture = Gesture.Pan()
     .onChange((e) => {
-      gestureScrollPosition.value += e.changeY;
+      if (scrollMode.value === 'GESTURE') {
+        gestureScrollPosition.value += e.changeY;
+      }
     })
     .onEnd((e) => {
-      gestureScrollPosition.value = withTiming(
-        e.velocityY > 0 ? height : height / 2
-      );
+      if (scrollMode.value === 'GESTURE') {
+        gestureScrollPosition.value = withTiming(
+          e.velocityY > 0 ? height : height / 2
+        );
+      }
     });
 
   const headerStyle = useAnimatedStyle(() => ({
     height: gestureScrollPosition.value,
   }));
 
-  // const nativeGesture = Gesture.Native();
-  // const composedGesture = Gesture.Simultaneous(gesture, nativeGesture);
-
+  const nativeGesture = Gesture.Native();
+  const composedGesture = Gesture.Simultaneous(gesture, nativeGesture);
 
   return (
-    <GestureDetector gesture={gesture}>
+    <GestureDetector gesture={composedGesture}>
       <Animated.ScrollView
         ref={pageScrollViewRef}
         scrollEnabled={pageScrollEnabled}
@@ -227,6 +237,7 @@ export default function App() {
         <Carousel title="Albums" photos={photos.slice(0, 6)} />
         <Carousel title="People" photos={photos.slice(3, 6)} />
         <Carousel title="Featured" photos={photos.slice(6, 10)} />
+        <Carousel title="Pets" photos={photos.slice(16, 20)} />
 
         <StatusBar style="auto" />
       </Animated.ScrollView>
